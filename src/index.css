@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-bg: #ffffff;
+  --color-brand-sidebar: #f8fafc;
+  --color-brand-text: #0f172a;
+  --color-brand-muted: #64748b;
+  --color-brand-border: #e2e8f0;
+  --color-brand-accent: #3b82f6;
+
+  @keyframes scan {
+    0% { transform: translateY(-100%); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(320px); opacity: 0; }
+  }
+  --animate-scan: scan 4s linear infinite;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-brand-text font-sans selection:bg-blue-100;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-tight font-sans font-bold;
+  }
+}
+
+.sidebar-link {
+  @apply text-sm font-medium text-brand-muted hover:text-brand-accent transition-all flex items-center gap-2 py-1;
+}
+
+.sidebar-link.active {
+  @apply text-brand-accent font-semibold;
+}
+
+.content-section {
+  @apply py-12 border-b border-brand-border last:border-0;
+}
+
+.publication-card {
+  @apply py-4 border-b border-brand-border/50 last:border-0 hover:bg-slate-50/50 -mx-4 px-4 transition-colors rounded-lg;
+}
+
+.tag {
+  @apply text-[10px] font-mono border border-brand-border px-2 py-0.5 rounded-full text-brand-muted uppercase tracking-tighter;
+}
