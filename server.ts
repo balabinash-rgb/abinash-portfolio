@@ -34,16 +34,60 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
+  // Serve uploads directory - make it absolute to be safe
+  app.use('/uploads', express.static(uploadDir));
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   // API Route for file uploads
   app.post('/api/upload', upload.single('media'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    try {
+      console.log('Upload request processed by multer:', req.file);
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded or file type not supported' });
+      }
+      
+      const publicPath = `/uploads/${req.file.filename}`;
+      console.log('Successfully uploaded:', publicPath);
+      res.json({ url: publicPath, filename: req.file.filename });
+    } catch (err) {
+      console.error('API Upload error:', err);
+      res.status(500).json({ error: 'Internal server error during upload' });
     }
-    const publicPath = `/uploads/${req.file.filename}`;
-    res.json({ url: publicPath });
+  });
+
+  // API Routes for site data persistence
+  const siteDataPath = path.join(process.cwd(), 'public', 'site_data.json');
+
+  app.get('/api/site-data', (req, res) => {
+    try {
+      if (fs.existsSync(siteDataPath)) {
+        const data = fs.readFileSync(siteDataPath, 'utf8');
+        res.json(JSON.parse(data));
+      } else {
+        res.json({});
+      }
+    } catch (err) {
+      console.error('Error reading site data:', err);
+      res.status(500).json({ error: 'Failed to read site data' });
+    }
+  });
+
+  app.post('/api/site-data', (req, res) => {
+    try {
+      fs.writeFileSync(siteDataPath, JSON.stringify(req.body, null, 2), 'utf8');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error saving site data:', err);
+      res.status(500).json({ error: 'Failed to save site data' });
+    }
   });
 
   // API Route for sending emails

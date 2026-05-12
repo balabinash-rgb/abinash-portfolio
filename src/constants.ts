@@ -10,10 +10,10 @@ export const CV_DATA = {
     email: "bal.47@osu.edu",
     secondaryEmail: "bal.abinash@gmail.com",
     profileImage: "/profile.png",
+    headerImage: "/uploads/media-1778527971317-186422201.jpg",
     // Replace YOUR_ID_HERE with your actual Google Scholar ID
     googleScholar: "https://scholar.google.com/citations?user=M5_ZZp0AAAAJ&hl=en",
     phone: "+1 (614) 330-9430",
-    researchPhilosophy: "My research lies at the intersection of Experimental Rock Mechanics and Petrophysics, focusing on the fundamental mechanisms of fluid transport and storage within the intricate nanopore networks of tight reservoir rocks. By bridging the gap between nano-scale observations and meso-scale behaviors, I aim to unlock new frontiers in Sustainable Energy recovery and Carbon Sequestration, pioneering the development of reliable predictive models for the global energy transition.",
     longTermGoal: "In the long term, I aim to lead an academic research program at the interface of rock mechanics, petrophysics, and CCUS, while mentoring the next generation of geoscientists."
   },
   researchInterests: [
@@ -23,7 +23,7 @@ export const CV_DATA = {
       title: "Experimental Rock Mechanics",
       description: "Characterizing mechanical behavior and pressure-dependent porosity evolution using high-pressure triaxial deformation tests. Focus on stress-strain dynamics in sandstones and limestones, exploring micro-structural failure and compaction localization.",
       keywords: ["Mechanical Behavior", "Triaxial deformation", "Stress-Strain", "Compaction localization"],
-      imageUrl: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=1200",
+      imageUrl: "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=1200",
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-scientific-process-in-a-laboratory-41221-large.mp4"
     },
     {
@@ -32,7 +32,7 @@ export const CV_DATA = {
       title: "Petrophysics",
       description: "Characterizing physical and chemical properties of reservoir rocks and their interactions with fluids to optimize storage and transport. Focus on porosity-permeability relationships and the influence of mineralogy on fluid-rock surface dynamics.",
       keywords: ["Porosity", "Permeability", "Petrophysical properties", "Mineral-Fluid interaction"],
-      imageUrl: "https://images.unsplash.com/photo-1582719501235-97f70b53648e?auto=format&fit=crop&q=80&w=1200",
+      imageUrl: "https://images.unsplash.com/photo-1574170623275-0373ae4a07ea?auto=format&fit=crop&q=80&w=1200",
       videoUrl: "" // Removed the inappropriate placeholder
     },
     {
@@ -41,7 +41,7 @@ export const CV_DATA = {
       title: "Digital Rock Physics",
       description: "Advanced Micro-CT imaging and algorithmic sub-resolution porosity modeling. Investigating non-uniqueness in permeability prediction and quantifying pore-fracture networks in 3D for CCS and reservoir management.",
       keywords: ["Micro-CT", "Pore Network", "Digital Rock Physics", "Sub-resolution porosity"],
-      imageUrl: "https://images.unsplash.com/photo-1581093458791-9f3c3250bb8b?auto=format&fit=crop&q=80&w=1200",
+      imageUrl: "https://images.unsplash.com/photo-1633167606207-d840b5070fc2?auto=format&fit=crop&q=80&w=1200",
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-top-of-a-microscope-showing-the-lenses-41223-large.mp4"
     },
     {
@@ -50,7 +50,7 @@ export const CV_DATA = {
       title: "Nanopore Characterization",
       description: "Multiscale assessment of shale nanopore heterogeneity using Synchrotron SAXS, FE-SEM, and Low-pressure gas adsorption. Mapping pore families (discretized) and quantifying accessible vs. total nanopore volumes.",
       keywords: ["Synchrotron SAXS", "Nanopore Heterogeneity", "Pore volume", "Accessibility"],
-      imageUrl: "https://images.unsplash.com/photo-1579154235602-3c32a76f2ff3?auto=format&fit=crop&q=80&w=1200",
+      imageUrl: "https://images.unsplash.com/photo-1530210124500-2495ea71597f?auto=format&fit=crop&q=80&w=1200",
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-analysis-of-a-liquid-in-a-test-tube-in-a-laboratory-41224-large.mp4"
     },
     {
@@ -68,7 +68,7 @@ export const CV_DATA = {
       title: "Carbon Sequestration (CCUS)",
       description: "Evaluating deep saline formations and coal seams for safe CO2 storage. Analyzing flow kinetics in dual-porous systems and the concurrent influence of geochemistry and mineralogy on sequestration permanence.",
       keywords: ["Carbon Sequestration", "CO2 storage", "Dual-porosity", "Saline formations"],
-      imageUrl: "https://images.unsplash.com/photo-1504917595217-d4dc5f9c47e8?auto=format&fit=crop&q=80&w=1200",
+      imageUrl: "https://images.unsplash.com/photo-1502633017246-0b1a0d7936a2?auto=format&fit=crop&q=80&w=1200",
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-industrial-complex-releasing-smoke-from-chimneys-41132-large.mp4"
     }
   ],
@@ -185,8 +185,7 @@ export const CV_DATA = {
         authors: "Bal, A., Misra, S., Sen, D.",
         year: "(2022)",
         title: "Accessible to total nanopore structure and complexity in Cambay shales, India: An implication on storage and transport of hydrocarbon.",
-        conference: "ARMA US Rock Mechanics/Geomechanics Symposium",
-        doi: "10.56952/ARMA-2022-0653"
+        conference: "ARMA US Rock Mechanics/Geomechanics Symposium"
       }
     ],
     underPreparation: [
@@ -223,7 +222,7 @@ export const CV_DATA = {
     { 
       year: "2018 – 2024", 
       title: "MHRD Research Fellowship", 
-      details: "Highly selective doctoral fellowship awarded for research excellence in unconventional energy (Total grant: USD 25,000)." 
+      details: "selective doctoral fellowship awarded for research" 
     },
     { 
       year: "2015", 
