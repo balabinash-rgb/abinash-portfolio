@@ -5,11 +5,11 @@ import nodemailer from 'nodemailer';
 import multer from 'multer';
 import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Cross-environment path resolution
+const rootDir = process.cwd();
 
 // Ensure upload directory exists
-const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+const uploadDir = path.join(rootDir, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -42,9 +42,13 @@ async function startServer() {
     next();
   });
 
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
   // Serve uploads directory - make it absolute to be safe
   app.use('/uploads', express.static(uploadDir));
-  app.use(express.static(path.join(process.cwd(), 'public')));
+  app.use(express.static(path.join(rootDir, 'public')));
 
   // API Route for file uploads
   app.post('/api/upload', upload.single('media'), (req, res) => {
@@ -64,7 +68,7 @@ async function startServer() {
   });
 
   // API Routes for site data persistence
-  const siteDataPath = path.join(process.cwd(), 'public', 'site_data.json');
+  const siteDataPath = path.join(rootDir, 'public', 'site_data.json');
 
   app.get('/api/site-data', (req, res) => {
     try {
@@ -133,17 +137,46 @@ async function startServer() {
   });
 
   // Vite integration
-  if (process.env.NODE_ENV !== 'production') {
+  const isProduction = process.env.NODE_ENV === 'production';
+  console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
+
+  if (!isProduction) {
+    console.log('Starting Vite in development mode...');
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
+    
+    // Explicitly serve index.html for SPA in dev mode
+    app.get(/.*/, async (req, res, next) => {
+      // If the request has an extension, it's likely an asset that Vite should have handled
+      if (req.path.includes('.') && !req.path.endsWith('.html')) {
+        return next();
+      }
+      
+      const url = req.originalUrl;
+      try {
+        // Read index.html from root
+        let template = fs.readFileSync(path.resolve(rootDir, 'index.html'), 'utf-8');
+        // Transform it via Vite
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        next(e);
+      }
+    });
+    console.log('Vite middleware and SPA fallback mounted');
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    console.log('Starting in production mode...');
+    const distPath = path.join(rootDir, 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
+    app.get(/.*/, (req, res, next) => {
+      // If it's an asset request that fell through, don't serve index.html
+      if (req.path.includes('.') && !req.path.endsWith('.html')) {
+        return next();
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

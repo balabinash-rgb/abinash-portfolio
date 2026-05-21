@@ -90,6 +90,10 @@ const GalleryCard = ({ item, i, isOwner, removeGalleryItem, updateGalleryItem, g
   const [isMuted, setIsMuted] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  useEffect(() => {
+    setHasError(false);
+  }, [item?.url]);
+
   const {
     attributes,
     listeners,
@@ -139,8 +143,17 @@ const GalleryCard = ({ item, i, isOwner, removeGalleryItem, updateGalleryItem, g
       ref={setNodeRef}
       style={style}
       whileHover={!isDragging ? { y: -4 } : undefined}
-      className={`group relative aspect-square rounded-3xl overflow-hidden bg-white border border-brand-border shadow-sm hover:shadow-xl transition-all ${isDragging ? 'opacity-40 cursor-grabbing' : ''}`}
+      className={`group relative aspect-square rounded-3xl overflow-hidden bg-white border border-brand-border shadow-sm hover:shadow-xl transition-all ${isDragging ? 'opacity-40 cursor-grabbing' : ''} ${isOwner && (!item.url || hasError) ? 'cursor-pointer hover:border-brand-accent/50' : ''}`}
       id={`gallery-item-${i}`}
+      onClick={(e) => {
+        if (isOwner && (!item.url || hasError)) {
+          const target = e.target as HTMLElement;
+          if (!target.closest('button') && !target.closest('.meta-edit-zone')) {
+            (window as any).replacingGalleryIndex = i;
+            galleryFileInputRef.current?.click();
+          }
+        }
+      }}
     >
         {item.url && !hasError ? (
           <div className="w-full h-full relative">
@@ -154,7 +167,13 @@ const GalleryCard = ({ item, i, isOwner, removeGalleryItem, updateGalleryItem, g
                   muted={isMuted} 
                   loop 
                   playsInline
-                  onError={() => setHasError(true)}
+                  onError={(e) => {
+                    if (hasError) return;
+                    setHasError(true);
+                    const video = e.currentTarget as HTMLVideoElement;
+                    video.src = "https://assets.mixkit.co/videos/preview/mixkit-scientific-process-in-a-laboratory-41221-large.mp4";
+                    video.load();
+                  }}
                 />
                 
                 {/* Video Controls Overlay */}
@@ -277,8 +296,8 @@ const GalleryCard = ({ item, i, isOwner, removeGalleryItem, updateGalleryItem, g
               {isOwner ? <Plus size={24} className="text-brand-accent" /> : <Camera size={24} className="text-slate-300" />}
             </div>
             <div 
-              className={`flex flex-col items-center p-4 rounded-2xl transition-all ${isOwner ? 'cursor-pointer hover:bg-slate-100/50' : ''}`}
-              onClick={isOwner ? () => updateGalleryItem(i) : undefined}
+              className={`flex flex-col items-center p-4 rounded-2xl transition-all meta-edit-zone ${isOwner ? 'cursor-pointer hover:bg-slate-100/50' : ''}`}
+              onClick={isOwner ? (e) => { e.stopPropagation(); updateGalleryItem(i); } : undefined}
               title={isOwner ? "Click to edit title and label" : ""}
             >
               <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2 flex items-center gap-2">
@@ -308,6 +327,7 @@ const GalleryCard = ({ item, i, isOwner, removeGalleryItem, updateGalleryItem, g
 };
 
 export default function App() {
+  console.log("App component rendering...");
   const { personal, researchInterests, experience, education, publications, awards, memberships, reviewing, skills } = CV_DATA as any;
   const [selectedInterest, setSelectedInterest] = useState<any>(null);
   const [profileImg, setProfileImg] = useState<string | null>(null);
@@ -349,11 +369,11 @@ export default function App() {
   const [isEditingDoi, setIsEditingDoi] = useState(false);
   const [doiInput, setDoiInput] = useState('');
   const [editingPubTarget, setEditingPubTarget] = useState<{ category: string, index: number } | null>(null);
-  const [pubArticles, setPubArticles] = useState<any[]>([]);
-  const [pubConferences, setPubConferences] = useState<any[]>([]);
-  const [pubUnderReview, setPubUnderReview] = useState<any[]>([]);
-  const [pubPreparation, setPubPreparation] = useState<any[]>([]);
-  const [siteData, setSiteData] = useState<any>(null);
+  const [pubArticles, setPubArticles] = useState<any[]>(CV_DATA.publications?.journalArticles || []);
+  const [pubConferences, setPubConferences] = useState<any[]>(CV_DATA.publications?.conferencePapers || []);
+  const [pubUnderReview, setPubUnderReview] = useState<any[]>(CV_DATA.publications?.underReview || []);
+  const [pubPreparation, setPubPreparation] = useState<any[]>(CV_DATA.publications?.underPreparation || []);
+  const [siteData, setSiteData] = useState<any>(CV_DATA);
 
   // Persistence logic
   const saveAllToServer = async (dataToSave: any) => {
@@ -400,19 +420,22 @@ export default function App() {
     const savedCV = localStorage.getItem('abinash_cv_url');
     if (savedCV) {
       setCvUrl(savedCV);
-      try {
-        const byteString = atob(savedCV.split(',')[1]);
-        const mimeString = savedCV.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
+      if (savedCV.startsWith('data:')) {
+        try {
+          const byteString = atob(savedCV.split(',')[1]);
+          const mimeString = savedCV.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], {type: mimeString});
+          setBlobUrl(URL.createObjectURL(blob));
+        } catch (e) {
+          console.error("Failed to generate blob URL from base64", e);
         }
-        const blob = new Blob([ab], {type: mimeString});
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
-      } catch (e) {
-        console.error("Failed to generate blob URL", e);
+      } else {
+        setBlobUrl(savedCV);
       }
     }
 
@@ -653,49 +676,129 @@ export default function App() {
     }
   };
 
-  const [researchInterestsState, setResearchInterestsState] = useState<any[]>([]);
-  const [imgError, setImgError] = useState(false);
-  const [galleryItems, setGalleryItems] = useState<{title: string, label: string, type: 'image' | 'video', url: string}[]>([]);
-  const [timelineItems, setTimelineItems] = useState<{date: string, text: string, type: 'postdoc' | 'phd' | 'other'}[]>([]);
-  const [achievementItems, setAchievementItems] = useState<{year: string, title: string, details: string}[]>([]);
+  const galleryDefaults: any[] = [
+    {
+      "title": "Wille Geotechnik System",
+      "label": "Advanced Triaxial Testing Facility",
+      "type": "image",
+      "url": "/uploads/media-1778605534625-390481291.JPG"
+    },
+    {
+      "title": "HP-T Triaxial Compression",
+      "label": "High-Pressure Experimental Lab",
+      "type": "image",
+      "url": "/uploads/media-1778605539824-797057083.JPG"
+    },
+    {
+      "title": "HeloScan_XCT",
+      "label": "Precision Micro-CT Analysis",
+      "type": "image",
+      "url": "/uploads/media-1778605615371-876077451.jpeg"
+    },
+    {
+      "title": "Batch Reactor",
+      "label": "Geochemical Pressure Vessel",
+      "type": "image",
+      "url": "/uploads/media-1778605627583-150102978.jpeg"
+    },
+    {
+      "title": "SEM Characterization",
+      "label": "Field Emission Scanning Microscopy",
+      "type": "image",
+      "url": "/uploads/media-1778605636787-115580303.jpeg"
+    },
+    {
+      "title": "PDP System",
+      "label": "Pulse Decay Permeability Setup",
+      "type": "image",
+      "url": "/uploads/media-1778605648000-656309316.jpg"
+    },
+    {
+      "title": "Gas Pycnometer",
+      "label": "Skeletal Density Determination",
+      "type": "image",
+      "url": "/uploads/media-1778605658389-65390783.jpg"
+    }
+  ].map((item, idx) => ({ ...item, id: `gallery-default-${idx}` }));
+
+    const timelineDefaults = [
+      { date: "Mar 2025", text: "Started Post-Doctoral position at The Ohio State University.", type: "postdoc" },
+      { date: "Sept 2024", text: "Successfully defended Ph.D. thesis at IIT Kanpur.", type: "phd" }
+    ];
+
+    const [researchInterestsState, setResearchInterestsState] = useState<any[]>(CV_DATA.researchInterests || []);
+    const [imgError, setImgError] = useState(false);
+    const [galleryItems, setGalleryItems] = useState<{title: string, label: string, type: 'image' | 'video', url: string}[]>(galleryDefaults);
+    const [timelineItems, setTimelineItems] = useState<{date: string, text: string, type: 'postdoc' | 'phd' | 'other'}[]>(timelineDefaults as any);
+  const [achievementItems, setAchievementItems] = useState<{year: string, title: string, details: string}[]>(CV_DATA.awards || []);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Persistent data loading from server
     const loadFromPersistence = async () => {
+      console.log("Starting loadFromPersistence...");
       try {
         const response = await fetch('/api/site-data');
+        if (!response.ok) throw new Error("Server responded with error");
         const serverData = await response.json();
+        console.log("Server data received:", serverData);
         
         if (serverData && Object.keys(serverData).length > 0) {
-          console.log("Loading data from server persistence");
-          if (serverData.researchInterestsState) setResearchInterestsState(serverData.researchInterestsState);
-          if (serverData.galleryItems) {
+          console.log("Merging data from server persistence");
+          
+          if (serverData.researchInterestsState && Array.isArray(serverData.researchInterestsState) && serverData.researchInterestsState.length > 0) {
+            setResearchInterestsState(serverData.researchInterestsState);
+          } else {
+            setResearchInterestsState(CV_DATA.researchInterests || []);
+          }
+
+          if (serverData.galleryItems && Array.isArray(serverData.galleryItems) && serverData.galleryItems.length > 0) {
             setGalleryItems(serverData.galleryItems.map((item: any, idx: number) => ({
               ...item,
               id: item.id || `gallery-${idx}-${Date.now()}`
             })));
+          } else {
+            console.log("Using gallery defaults as server returned empty");
+            setGalleryItems(galleryDefaults);
           }
-          if (serverData.timelineItems) setTimelineItems(serverData.timelineItems);
-          if (serverData.achievementItems) setAchievementItems(serverData.achievementItems);
-          if (serverData.pubArticles) setPubArticles(serverData.pubArticles);
-          if (serverData.pubConferences) setPubConferences(serverData.pubConferences);
-          if (serverData.pubUnderReview) setPubUnderReview(serverData.pubUnderReview);
-          if (serverData.pubPreparation) setPubPreparation(serverData.pubPreparation);
-          if (serverData.siteData) setSiteData(serverData.siteData);
+
+          if (serverData.timelineItems && Array.isArray(serverData.timelineItems) && serverData.timelineItems.length > 0) {
+            setTimelineItems(serverData.timelineItems);
+          } else {
+            setTimelineItems(timelineDefaults);
+          }
+
+          if (serverData.achievementItems && Array.isArray(serverData.achievementItems) && serverData.achievementItems.length > 0) {
+            setAchievementItems(serverData.achievementItems);
+          } else {
+            setAchievementItems(CV_DATA.awards || []);
+          }
+
+          if (Array.isArray(serverData.pubArticles)) setPubArticles(serverData.pubArticles);
+          if (Array.isArray(serverData.pubConferences)) setPubConferences(serverData.pubConferences);
+          if (Array.isArray(serverData.pubUnderReview)) setPubUnderReview(serverData.pubUnderReview);
+          if (Array.isArray(serverData.pubPreparation)) setPubPreparation(serverData.pubPreparation);
+          
+          if (serverData.siteData) {
+            setSiteData({ ...CV_DATA, ...serverData.siteData });
+          } else {
+            setSiteData(CV_DATA);
+          }
+
           if (serverData.profileImg) setProfileImg(serverData.profileImg);
           if (serverData.headerImgs) setHeaderImgs(serverData.headerImgs);
           if (serverData.cvUrl) {
             setCvUrl(serverData.cvUrl);
-            setBlobUrl(serverData.cvUrl); // Normal URL works with <object>
+            setBlobUrl(serverData.cvUrl); 
           }
           if (serverData.cvExternalUrl) setCvExternalUrl(serverData.cvExternalUrl);
           return;
         }
       } catch (err) {
-        console.error("Failed to load from server, using local storage", err);
+        console.error("Failed to load from server, using local fallback", err);
       }
 
+      console.log("Proceeding with local fallback...");
       // FALLBACK TO LOCAL STORAGE
       const savedInterests = localStorage.getItem('abinash_research_interests');
       let interestsInstance = [];
@@ -709,7 +812,7 @@ export default function App() {
           }
         } catch (e) { interestsInstance = researchInterests; }
       } else interestsInstance = researchInterests;
-      setResearchInterestsState(interestsInstance);
+      setResearchInterestsState(interestsInstance || []);
 
       const savedGallery = localStorage.getItem('abinash_gallery_items');
       if (savedGallery) {
@@ -720,51 +823,39 @@ export default function App() {
               ...item,
               id: item.id || `gallery-${idx}-${Date.now()}`
             }));
-            const hasWille = normalized.some((item: any) => item.url === '/lab_wille.png' || item.title.includes('Wille'));
-            if (!hasWille) {
-              normalized.unshift({ id: `gallery-wille-${Date.now()}`, title: "Wille Geotechnik System", label: "Advanced Triaxial Testing", type: "image", url: "/lab_wille.png" });
-              localStorage.setItem('abinash_gallery_items', JSON.stringify(normalized));
-            }
             setGalleryItems(normalized);
           } else setGalleryItems(galleryDefaults);
         } catch (e) { setGalleryItems(galleryDefaults); }
       } else setGalleryItems(galleryDefaults);
 
       const savedTimeline = localStorage.getItem('abinash_timeline_items');
-      if (savedTimeline) setTimelineItems(JSON.parse(savedTimeline));
+      if (savedTimeline) try { setTimelineItems(JSON.parse(savedTimeline)); } catch(e) { setTimelineItems(timelineDefaults); }
       else setTimelineItems(timelineDefaults);
 
       const savedAchievements = localStorage.getItem('abinash_achievement_items');
-      if (savedAchievements) setAchievementItems(JSON.parse(savedAchievements));
+      if (savedAchievements) try { setAchievementItems(JSON.parse(savedAchievements)); } catch(e) { setAchievementItems(CV_DATA.awards); }
       else setAchievementItems(CV_DATA.awards);
 
       const savedArticles = localStorage.getItem('abinash_pub_articles');
-      if (savedArticles) setPubArticles(JSON.parse(savedArticles));
+      if (savedArticles) try { setPubArticles(JSON.parse(savedArticles)); } catch(e) { setPubArticles(publications.journalArticles); }
       else setPubArticles(publications.journalArticles);
 
       const savedConferences = localStorage.getItem('abinash_pub_conferences');
-      if (savedConferences) setPubConferences(JSON.parse(savedConferences));
+      if (savedConferences) try { setPubConferences(JSON.parse(savedConferences)); } catch(e) { setPubConferences(publications.conferencePapers); }
       else setPubConferences(publications.conferencePapers);
 
       const savedUnderReview = localStorage.getItem('abinash_pub_under_review');
-      if (savedUnderReview) setPubUnderReview(JSON.parse(savedUnderReview));
+      if (savedUnderReview) try { setPubUnderReview(JSON.parse(savedUnderReview)); } catch(e) { setPubUnderReview(publications.underReview); }
       else setPubUnderReview(publications.underReview);
 
       const savedPreparation = localStorage.getItem('abinash_pub_preparation');
-      if (savedPreparation) setPubPreparation(JSON.parse(savedPreparation));
+      if (savedPreparation) try { setPubPreparation(JSON.parse(savedPreparation)); } catch(e) { setPubPreparation(publications.underPreparation); }
       else setPubPreparation(publications.underPreparation);
 
       const savedSiteData = localStorage.getItem('abinash_site_data');
-      if (savedSiteData) setSiteData(JSON.parse(savedSiteData));
+      if (savedSiteData) try { setSiteData(JSON.parse(savedSiteData)); } catch(e) { setSiteData(CV_DATA); }
       else setSiteData(CV_DATA);
     };
-
-    const galleryDefaults: any[] = [];
-
-    const timelineDefaults = [
-      { date: "Mar 2025", text: "Started Post-Doctoral position at The Ohio State University.", type: "postdoc" },
-      { date: "Sept 2024", text: "Successfully defended Ph.D. thesis at IIT Kanpur.", type: "phd" }
-    ];
 
     loadFromPersistence();
   }, []);
@@ -803,6 +894,7 @@ export default function App() {
       localStorage.setItem('abinash_pub_under_review', JSON.stringify(pubUnderReview));
       localStorage.setItem('abinash_pub_preparation', JSON.stringify(pubPreparation));
       if (profileImg) localStorage.setItem('abinash_profile_image', profileImg);
+      if (cvUrl) localStorage.setItem('abinash_cv_url', cvUrl);
       localStorage.setItem('abinash_header_images', JSON.stringify(headerImgs));
     }, 2000); // 2 second debounce
     
@@ -1230,7 +1322,10 @@ export default function App() {
               referrerPolicy="no-referrer"
               style={{ imageRendering: 'auto' }}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = "/lab_wille.png";
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.src.includes('/lab_wille.png')) {
+                  img.src = "/lab_wille.png";
+                }
               }}
             />
           </EditableImage>
@@ -1367,7 +1462,8 @@ export default function App() {
         </div>
       </nav>
 
-      <div className="relative z-20 bg-[#fafafa] w-full min-h-screen mt-[60vh] sm:mt-[50vh] md:mt-[60vh] lg:mt-[70vh]">
+      {/* Main Content Area */}
+      <div className="relative z-20 bg-[#fafafa] w-full min-h-screen mt-[50vh] sm:mt-[40vh] md:mt-[45vh] lg:mt-[55vh]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-8 lg:gap-16 pt-12">
       
       {/* LEFT SIDEBAR - Persistent profile & nav */}
@@ -1387,7 +1483,8 @@ export default function App() {
                 />
               ) : (
                 <span className="animate-pulse-slow">
-                  {personal.name.split(' ')[0][0]}{personal.name.split(' ')[1][0]}
+                  {(siteData?.personal?.name || personal.name || "A B").split(' ')[0]?.[0]}
+                  {(siteData?.personal?.name || personal.name || "A B").split(' ')[1]?.[0]}
                 </span>
               )}
             </EditableImage>
@@ -1998,7 +2095,7 @@ export default function App() {
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-             {(siteData?.awards || awards).map((item: any, i: number) => (
+             {achievementItems.map((item: any, i: number) => (
                <div key={i} className="p-6 md:p-8 bg-white border border-brand-border rounded-3xl hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-brand-accent opacity-20 group-hover:opacity-100 transition-opacity"></div>
                  <div className="flex justify-between items-start mb-4">
@@ -2449,13 +2546,29 @@ export default function App() {
 
             {/* Modal Content */}
             <div className="flex-grow bg-slate-100 overflow-hidden relative overflow-y-auto no-scrollbar">
-              {blobUrl ? (
+              {(blobUrl || cvUrl) ? (
                 <div className="w-full h-full flex flex-col bg-white">
+                  <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                       <ShieldCheck size={14} className="text-brand-accent" /> 
+                       Verified Document Viewer
+                    </span>
+                    <div className="flex gap-4">
+                      <a 
+                        href={blobUrl || cvUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[9px] font-bold text-brand-accent hover:underline flex items-center gap-1"
+                      >
+                        NEW TAB <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  </div>
                   <object 
-                    data={`${blobUrl}#view=FitH`} 
+                    data={`${blobUrl || cvUrl}#view=FitH`} 
                     type="application/pdf" 
                     className="w-full h-full border-none"
-                    style={{ minHeight: 'calc(100vh - 64px)' }}
+                    style={{ minHeight: 'calc(100vh - 120px)' }}
                   >
                     <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-slate-50">
                       <FileText size={48} className="text-brand-accent mb-4 opacity-20" />
@@ -2464,7 +2577,9 @@ export default function App() {
                         Your browser or security settings are preventing the embedded PDF viewer from loading. You can still download the file to view it.
                       </p>
                       <a 
-                        href={blobUrl} 
+                        href={blobUrl || cvUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         download="Abinash_Bal_CV.pdf"
                         className="px-8 py-3 bg-brand-accent text-white font-bold uppercase tracking-widest text-[10px] rounded-full hover:bg-slate-900 transition-all shadow-lg"
                       >
@@ -3193,7 +3308,22 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Login Modal */}
+      {/* Emergency Reset for Owners */}
+      {isOwner && (
+        <button 
+          onClick={() => {
+            if (window.confirm("RESET ALL SITE DATA? This will overwrite everything with defaults. Only use if images are broken.")) {
+              setSiteData(CV_DATA);
+              setGalleryItems([{ id: 'default-1', title: 'Laboratory Equipment', label: 'Experimental Setup', type: 'image', url: '/lab_wille.png' }]);
+              saveAllToServer({ ...CV_DATA, galleryItems: [{ id: 'default-1', title: 'Laboratory Equipment', label: 'Experimental Setup', type: 'image', url: '/lab_wille.png' }] });
+              window.location.reload();
+            }
+          }}
+          className="fixed bottom-4 left-4 z-[100] p-2 bg-red-600 text-white text-[8px] font-bold uppercase rounded-lg opacity-20 hover:opacity-100 transition-opacity"
+        >
+          Reset Data
+        </button>
+      )}
       <AnimatePresence>
         {isLoginOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
